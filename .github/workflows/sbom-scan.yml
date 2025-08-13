@@ -1,5 +1,4 @@
-name: sbom-scanner
-
+name: SBOM Scan
 
 on:
   push:
@@ -12,37 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Install Python
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
+      - name: Install Syft (for SBOM generation)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
 
-      # Step 3: Install Grype
-      - name: Install Grype
+      - name: Generate SBOM
+        run: |
+          syft dir:. -o json > sbom.json
+
+      - name: Install Grype (for vulnerability scanning)
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
 
-      # Generate a dummy SBOM for demonstration purposes
-      - name: Generate Dummy SBOM
+      - name: Scan SBOM with Grype
         run: |
-          mkdir -p dummy-project
-          echo "placeholder content" > dummy-project/placeholder.txt
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-          syft dummy-project -o json > dummy-project-sbom.json
+          grype sbom:sbom.json -o table > grype-report.txt
 
-      # Run the scan.py script
-      - name: Run Grype Scan
-        run: |
-          python3 scan.py --repo-name dummy-project --sbom-path dummy-project-sbom.json --report-dir ./reports
-
-      # Step 6: Upload the Grype report as an artifact
-      - name: Upload Grype Report
+      - name: Upload SBOM report
         uses: actions/upload-artifact@v4
         with:
-          name: grype-report
-          path: ./reports/
+          name: sbom-report
+          path: grype-report.txt
