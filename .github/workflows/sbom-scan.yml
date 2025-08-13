@@ -1,4 +1,5 @@
-name: SBOM Vulnerability Scan
+name: sbom-scanner
+
 
 on:
   push:
